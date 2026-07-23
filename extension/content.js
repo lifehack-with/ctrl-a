@@ -4,8 +4,6 @@
   const LIB = globalThis.PFD_MD;
   if (!LIB) { alert("Ctrl+A: 読込に失敗しました（再度お試しください）"); return; }
 
-  const HL_SEL = LIB.HL_SEL;
-  const SCRUB = "nav,header,footer,aside,form";
   const root = document.body;
 
   const OLD = document.getElementById("ctrla-panel");
@@ -22,29 +20,69 @@
   const IC_X = svg("<path d='M18 6 6 18'/><path d='m6 6 12 12'/>", 14);
   const IC_CHECK = svg("<path d='M20 6 9 17l-5-5'/>");
   const IC_DOCK = svg("<rect width='18' height='18' x='3' y='3' rx='2'/><path d='M15 3v18'/>", 14);
+  const IC_DOCK_L = svg("<rect width='18' height='18' x='3' y='3' rx='2'/><path d='M9 3v18'/>", 14);   // 左端に貼り付く
   const IC_FLOAT = svg("<rect width='14' height='11' x='7' y='9' rx='2'/><path d='M7 9V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-4'/>", 14);
   const IC_CHEVL = svg("<path d='m15 18-6-6 6-6'/>", 16);
   const IC_CHEVR = svg("<path d='m9 18 6-6-6-6'/>", 16);
   const IC_FILE = svg("<path d='M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z'/><polyline points='14 2 14 8 20 8'/>", 13);
 
-  // ===== 対象ブロック抽出 =====
-  const liveAll = [...root.querySelectorAll(HL_SEL)];
-  const blocks = liveAll.filter(e => {
-    if (!e.textContent.trim()) return false;
-    if (e.querySelector(HL_SEL)) return false;
-    if (e.closest(SCRUB)) return false;
-    const r = e.getBoundingClientRect();
-    return r.width > 4 && r.height > 4;
-  });
-
-  function buildMd(excluded) {
+  // ===== 対象ブロック抽出（Ctrl+A方式）=====
+  // キーボードの全選択と同じ思想＝「選べるものは全部拾う」。タグ白リストで機械が間引かず、
+  // ページ全体を最小間引き(MIN)で先にMD化 → MDブロック単位でプレビュー/排除/出力を完全一致させる。
+  const pageMd = () => {
+    // 全選択と同じく「描画されている文字だけ」対象にする。
+    // クローンは計算スタイルを失うので、生DOM側で非表示(display:none等)を判定してからクローン側の同じ位置を落とす。
+    const liveEls = [...root.querySelectorAll("*")];
     const clone = root.cloneNode(true);
+    const cloneEls = [...clone.querySelectorAll("*")];
+    liveEls.forEach((el, i) => {
+      if (el.checkVisibility && !el.checkVisibility()) {
+        const p = el.parentElement;
+        if (!p || !p.checkVisibility || p.checkVisibility()) {   // 非表示の最上位だけ消せば配下ごと消える
+          const c = cloneEls[i];
+          if (c && c.parentNode) c.remove();
+        }
+      }
+    });
     const selfPanel = clone.querySelector("#ctrla-panel");
     if (selfPanel) selfPanel.remove();
-    const all = [...clone.querySelectorAll(HL_SEL)];
-    excluded.forEach(i => { if (all[i]) all[i].remove(); });
-    clone.querySelectorAll(SCRUB).forEach(e => e.remove());
-    return LIB.tidy(LIB.PROSE.toMd(clone));
+    return LIB.tidy(LIB.MIN.toMd(clone));
+  };
+  const mdBlocks = LIB.splitMdBlocks(pageMd());
+
+  // ページ側ハイライト/ミニマップ用: MDブロック→生DOM要素の対応付け（正規化テキスト先頭一致・最小要素優先）
+  // 照合できないブロックは live 無し＝ハイライト/ミニマップ点のみ非対応（排除・出力は全ブロック可能）
+  // MD記法を平文化してから正規化（[text](url)→text・URL除去）。要素側textContentと同じ土俵で照合するため
+  const mdPlain = s => (s || "").replace(/\[([^\]]*)\]\(([^)]*)\)/g, "$1").replace(/https?:\/\/\S+/g, " ");
+  // 記号を落とし、さらに空白も全除去して照合（li連結・改行差などの空白ズレに強くする）
+  const normTxt = s => (s || "").replace(/[#>*`|_\-\[\]()"':;.,^•†‡]+/g, " ").replace(/\s+/g, "").slice(0, 40).toLowerCase();
+  // 候補は「表示中」のみ。目次/ナビ内の同名テキスト(アウトライン)より本文側を優先し、見出しブロックは h1-h6 を優先
+  const NAVISH = "nav,aside,[role='navigation'],[class*='toc' i],[id*='toc' i]";
+  const liveCand = new Map();   // 正規化テキスト -> { main:[], nav:[] }
+  [...root.querySelectorAll("h1,h2,h3,h4,h5,h6,p,ul,ol,li,table,pre,blockquote,td,th,dl,dt,dd,figcaption,summary,div,span,a")].forEach(el => {
+    if (el.checkVisibility && !el.checkVisibility()) return;
+    const k = normTxt(el.textContent);
+    if (!k) return;
+    let e = liveCand.get(k);
+    if (!e) { e = { main: [], nav: [] }; liveCand.set(k, e); }
+    (el.closest(NAVISH) ? e.nav : e.main).push(el);
+  });
+  const pickLive = b => {
+    const e = liveCand.get(normTxt(mdPlain(b)));
+    if (!e) return null;
+    const isHead = /^#{1,6}\s/.test(b);
+    for (const pool of [e.main, e.nav]) {   // 本文側を優先・無ければナビ側
+      if (!pool.length) continue;
+      let list = pool;
+      if (isHead) { const hs = pool.filter(x => /^H[1-6]$/.test(x.tagName)); if (hs.length) list = hs; }
+      return list.reduce((a, x) => x.textContent.length < a.textContent.length ? x : a);
+    }
+    return null;
+  };
+  const live = mdBlocks.map(pickLive);
+
+  function buildMd(excluded) {
+    return LIB.tidy(mdBlocks.filter((_, i) => !excluded.has(i)).join("\n\n"));
   }
 
   // ===== 走り目地レンガ =====
@@ -72,7 +110,7 @@
 
   // ---- ジオメトリ ----
   const MINW = 320, MINH = 240, FR = 16, FRH = 6, FRB = 40;   // FR=上枠 / FRH=左右枠(極細) / FRB=下枠(ボタン高さ帯 border4+pad36)
-  const g = { docked: false, left: 0, top: 16, width: 440, height: 640, back: null };
+  const g = { docked: false, side: "right", left: 0, top: 16, width: 440, height: 640, back: null };   // side: ドッキング先（right/left）
   g.width = Math.min(460, Math.max(MINW, Math.round(window.innerWidth * 0.42)));
   g.height = Math.min(720, Math.max(MINH, Math.round(window.innerHeight * 0.8)));
   g.left = 16;   // 起点＝左上に統一（パネルを画面左上に置く）
@@ -85,7 +123,10 @@
   }
   function applyGeom() {
     if (g.docked) {
-      ui.style.left = "auto"; ui.style.right = (-FRH) + "px"; ui.style.top = (-FR) + "px"; ui.style.bottom = (-FRB) + "px";
+      // side に応じて左右どちらの端にも貼り付く。リサイズ用エッジは内側（画面中央側）に置く
+      if (g.side === "right") { ui.style.left = "auto"; ui.style.right = (-FRH) + "px"; edge.style.left = "0"; edge.style.right = "auto"; }
+      else { ui.style.right = "auto"; ui.style.left = (-FRH) + "px"; edge.style.left = "auto"; edge.style.right = "0"; }
+      ui.style.top = (-FR) + "px"; ui.style.bottom = (-FRB) + "px";
       ui.style.width = g.width + "px"; ui.style.height = "auto"; ui.style.borderRadius = "0";
     } else {
       clampFloat();
@@ -94,7 +135,7 @@
       ui.style.width = g.width + "px"; ui.style.height = g.height + "px"; ui.style.borderRadius = "12px";
     }
     cornerHandles.forEach(h => h.style.display = g.docked ? "none" : "block");
-    leftEdge.style.display = g.docked ? "block" : "none";
+    edge.style.display = g.docked ? "block" : "none";
     drawMini();
   }
   function startResize(corner, e) {
@@ -102,7 +143,7 @@
     const sx = e.clientX, sy = e.clientY, s = { left: g.left, top: g.top, width: g.width, height: g.height };
     const onMove = ev => {
       const dx = ev.clientX - sx, dy = ev.clientY - sy;
-      if (g.docked) { g.width = Math.max(MINW, Math.min(s.width - dx, window.innerWidth - 8)); }
+      if (g.docked) { g.width = Math.max(MINW, Math.min(g.side === "right" ? s.width - dx : s.width + dx, window.innerWidth - 8)); }
       else {
         // 左上固定：left/top は動かさず width/height だけ。右/下ドラッグ=拡大、左/上=縮小。
         g.width = Math.max(MINW, s.width + dx);
@@ -136,11 +177,11 @@
     d.addEventListener("pointerdown", e => startResize(c, e));
     ui.appendChild(d); cornerHandles.push(d);
   });
-  const leftEdge = document.createElement("div");
-  leftEdge.title = "ドラッグで幅変更";
-  leftEdge.style.cssText = "position:absolute;left:0;top:0;bottom:0;width:14px;cursor:ew-resize;z-index:6;display:none";
-  leftEdge.addEventListener("pointerdown", e => startResize("l", e));
-  ui.appendChild(leftEdge);
+  const edge = document.createElement("div");   // ドック時の幅変更エッジ（右ドック=左辺 / 左ドック=右辺）
+  edge.title = "ドラッグで幅変更";
+  edge.style.cssText = "position:absolute;left:0;top:0;bottom:0;width:14px;cursor:ew-resize;z-index:6;display:none";
+  edge.addEventListener("pointerdown", e => startResize("l", e));
+  ui.appendChild(edge);
 
   // ---- 上枠のコントロール（ドッキング＋閉じる・金・密着）----
   const mkHeadBtn = (icon, tip, radius) => {
@@ -150,16 +191,36 @@
     b.innerHTML = icon;
     return b;
   };
-  const dockBtn = mkHeadBtn(IC_DOCK, "右端にドッキング", "5px 0 0 5px");
+  const leftBtn = mkHeadBtn(IC_DOCK_L, "左端に貼り付く", "5px 0 0 5px");
+  const dockBtn = mkHeadBtn(IC_DOCK, "フローティング⇔貼り付け", "0");
+  const rightBtn = mkHeadBtn(IC_DOCK, "右端に貼り付く", "0");
   const closeBtn = mkHeadBtn(IC_X, "閉じる", "0 5px 5px 0");
-  closeBtn.style.marginLeft = "-2px";
-  dockBtn.style.transform = "translate(7px,-11px)";   // パネル：右7・上11
-  closeBtn.style.transform = "translate(0,-11px)";     // 閉じる：上11
-  dockBtn.onclick = () => {
-    if (!g.docked) { g.back = { left: g.left, top: g.top, width: g.width, height: g.height }; g.docked = true; dockBtn.innerHTML = IC_FLOAT; dockBtn.title = "フローティングに戻す"; }
-    else { g.docked = false; if (g.back) { g.left = g.back.left; g.top = g.back.top; g.width = g.back.width; g.height = g.back.height; } dockBtn.innerHTML = IC_DOCK; dockBtn.title = "右端にドッキング"; }
-    applyGeom();
+  [dockBtn, rightBtn, closeBtn].forEach(b => b.style.marginLeft = "-2px");
+  leftBtn.style.transform = "translate(21px,-11px)";   // 4連ボタン：右へ寄せ・上11
+  dockBtn.style.transform = "translate(14px,-11px)";
+  rightBtn.style.transform = "translate(7px,-11px)";
+  closeBtn.style.transform = "translate(0,-11px)";
+  // 押せる=金 / 押せない(既にその状態)=レンガ色（パネル共通の作法）
+  const paintDockBtn = (btn, pressable) => { btn.style.background = pressable ? GOLD : BRICKBTN; btn.style.color = pressable ? "#6b3d0c" : "#d9b79c"; };
+  const syncDockBtns = () => {
+    dockBtn.innerHTML = g.docked ? IC_FLOAT : IC_DOCK;
+    dockBtn.title = g.docked ? "フローティングに戻す" : "端に貼り付ける";
+    paintDockBtn(leftBtn, !(g.docked && g.side === "left"));
+    paintDockBtn(rightBtn, !(g.docked && g.side === "right"));
   };
+  const dockTo = side => {
+    g.side = side;
+    if (!g.docked) { g.back = { left: g.left, top: g.top, width: g.width, height: g.height }; g.docked = true; }
+    applyGeom(); syncDockBtns();
+  };
+  leftBtn.onclick = () => dockTo("left");
+  rightBtn.onclick = () => dockTo("right");
+  dockBtn.onclick = () => {
+    if (!g.docked) { g.back = { left: g.left, top: g.top, width: g.width, height: g.height }; g.docked = true; }
+    else { g.docked = false; if (g.back) { g.left = g.back.left; g.top = g.back.top; g.width = g.back.width; g.height = g.back.height; } }
+    applyGeom(); syncDockBtns();
+  };
+  syncDockBtns();
   // ---- ヘッダー（紺・縦2段: 上=badge/タイトル/ドッキング/閉じる, 下=ファイル名）----
   const head = document.createElement("div");
   head.style.cssText = "position:relative;display:flex;flex-direction:column;gap:6px;background:linear-gradient(180deg,#16264f,#0f1a3a);border:2px solid #0c1530;border-radius:8px 8px 0 0;padding:9px 12px;cursor:move";
@@ -173,7 +234,7 @@
     + "box-shadow:inset 0 1px 0 rgba(255,255,255,.65),inset 0 -3px 4px rgba(0,0,0,.3),0 2px 3px rgba(0,0,0,.5);"
     + "font-size:22px;color:#b23a2e;letter-spacing:2px;text-shadow:1px 1px 0 rgba(0,0,0,.25),0 0 1px rgba(60,20,15,.5);-webkit-text-stroke:0.7px rgba(45,18,12,.45);" + PIXEL;
   title.innerHTML = cornerDots("#5a5e66", 4) + "Ctrl+A";
-  headRow.append(title, dockBtn, closeBtn);
+  headRow.append(title, leftBtn, dockBtn, rightBtn, closeBtn);
 
   // ---- ツールバー ----
   const tools = document.createElement("div");
@@ -227,7 +288,7 @@
   const dot = document.createElement("div");
   dot.style.cssText = "position:absolute;left:-2px;width:9px;height:9px;border-radius:50%;background:#ffcf4d;border:1px solid #7a4410;transform:translateY(-50%);pointer-events:none;box-shadow:0 0 5px rgba(255,207,77,.8);z-index:2";
   mini.append(vpBox, dot);
-  const ticks = blocks.map(() => { const t = document.createElement("div"); t.style.cssText = "position:absolute;left:2px;right:2px;height:2px;border-radius:1px;background:#3a6ea5;pointer-events:none"; mini.appendChild(t); return t; });
+  const ticks = mdBlocks.map(() => { const t = document.createElement("div"); t.style.cssText = "position:absolute;left:2px;right:2px;height:2px;border-radius:1px;background:#3a6ea5;pointer-events:none"; mini.appendChild(t); return t; });
   viewWrap.append(term, mini);
 
   // 横スクロール◀▶（金・押しっぱなしで連続スクロール）
@@ -271,7 +332,11 @@
     if (mini.style.display === "none") return;
     const bh = mini.clientHeight; if (!bh) return;
     const sc = bh / pageH();
-    blocks.forEach((el, i) => { const top = el.getBoundingClientRect().top + window.scrollY; ticks[i].style.top = (top * sc) + "px"; });
+    live.forEach((el, i) => {
+      if (!el) { ticks[i].style.display = "none"; return; }
+      ticks[i].style.display = "block";
+      const top = el.getBoundingClientRect().top + window.scrollY; ticks[i].style.top = (top * sc) + "px";
+    });
     updateVp();
   }
   function updateVp() {
@@ -283,7 +348,7 @@
   }
   function syncPreview(pageY) {
     let bi = -1, best = Infinity;
-    blocks.forEach((el, i) => { const t = el.getBoundingClientRect().top + window.scrollY; const d = Math.abs(t - pageY); if (d < best) { best = d; bi = i; } });
+    live.forEach((el, i) => { if (!el) return; const t = el.getBoundingClientRect().top + window.scrollY; const d = Math.abs(t - pageY); if (d < best) { best = d; bi = i; } });
     const row = rows[bi]; if (!row) return;
     const tr = term.getBoundingClientRect(), rr = row.getBoundingClientRect();
     term.scrollTop += (rr.top - tr.top) - term.clientHeight / 2 + rr.height / 2;
@@ -319,11 +384,8 @@
   drawMini();
 
   // ===== プレビュー行 =====
-  const lineOf = (el) => {
-    if (el.tagName === "TABLE") return [...el.querySelectorAll("tr")].map(tr => [...tr.children].map(c => c.textContent.trim()).join(" | ")).join("   ");
-    return el.textContent.replace(/\s+/g, " ").trim();
-  };
-  const items = blocks.map(el => ({ key: liveAll.indexOf(el), live: el, html: "<span class='ca-txt'>" + LIB.escH(lineOf(el)) + "</span>" }));
+  // renderMdBlock＝共有ライブラリの構造描画（見出しの大きさ・表の罫線・リストのインデント）をそのまま使う
+  const items = mdBlocks.map((md, i) => ({ key: i, live: live[i] || undefined, html: LIB.renderMdBlock(md) }));
   const ROW_BASE = "padding:2px 3px;border-radius:3px;cursor:pointer;user-select:none;color:#cdd9e5";
   const ROW_SEL  = ";background:rgba(255,45,120,.16);box-shadow:0 0 7px rgba(255,45,120,.55),inset 0 0 0 1px rgba(255,45,120,.6);color:#ffd7e6";
   const ROW_EX   = ";opacity:.4;text-decoration:line-through";
@@ -336,8 +398,22 @@
       ticks[i] && (ticks[i].style.background = isEx ? "#555b66" : (isSel ? PICK : "#3a6ea5"));
     });
   };
+  // 同一内容ブロックの連動: 1個排除/復活したら同じ内容の全ブロックに伝播（Wikipediaの[edit]等の一括掃除）
+  const dupes = new Map();
+  mdBlocks.forEach((b, i) => { const a = dupes.get(b); if (a) a.push(i); else dupes.set(b, [i]); });
+  let exRef = null, prevEx = new Set();
+  const syncDupes = excluded => {
+    const added = [...excluded].filter(k => !prevEx.has(k));
+    const removed = [...prevEx].filter(k => !excluded.has(k));
+    let changed = false;
+    added.forEach(k => dupes.get(mdBlocks[k]).forEach(j => { if (!excluded.has(j)) { excluded.add(j); changed = true; } }));
+    removed.forEach(k => dupes.get(mdBlocks[k]).forEach(j => { if (excluded.has(j)) { excluded.delete(j); changed = true; } }));
+    prevEx = new Set(excluded);
+    return changed;
+  };
   const updateCount = (excluded, selected) => {
-    count.textContent = blocks.length + "ブロック"
+    if (syncDupes(excluded) && exRef) { exRef.refresh(); return; }   // 伝播したら再描画してから通常処理へ
+    count.textContent = mdBlocks.length + "ブロック"
       + (excluded.size ? " ・除外 " + excluded.size : "")
       + (selected.size ? " ・選択 " + selected.size : "");
     // 排除・選択解除は選択があるとき金／元に戻すは除外があるとき金（既定はレンガ色）
@@ -347,6 +423,7 @@
     themeAll();
   };
   const ex = LIB.buildExcluder(rowsHost, items, { onChange: updateCount });
+  exRef = ex;
   rows = [...rowsHost.children];
   updateCount(ex.excluded, ex.selected);
   ui._destroy = () => { try { ex.destroy(); } catch (e) {} window.removeEventListener("resize", onWinResize); window.removeEventListener("scroll", onScroll); sbStyle.remove(); };

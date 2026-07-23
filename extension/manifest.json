@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Ctrl+A",
   "version": "1.0.0",
-  "description": "Grab the whole page as clean Markdown. Press Ctrl+A, preview, drop the noise you don't want, then copy or download .md.",
+  "description": "Grab the whole page as clean Markdown. One click, one big Ctrl+A button, preview, drop the noise, then copy or download .md.",
   "permissions": ["scripting", "activeTab"],
   "action": {
     "default_title": "Ctrl+A — page to Markdown",

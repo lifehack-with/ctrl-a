@@ -1,6 +1,6 @@
 # Ctrl+A
 
-Grab the whole page as clean Markdown. Press **Ctrl+A**, preview, drop the noise you don't want, then copy or download `.md`.
+Grab the whole page as clean Markdown. Click the **A** icon, hit the **Ctrl+A** button, preview, drop the noise you don't want, then copy or download `.md`.
 
 ---
 
@@ -15,7 +15,7 @@ Grab the whole page as clean Markdown. Press **Ctrl+A**, preview, drop the noise
 ## Use
 
 1. Open any page.
-2. Click the **A** icon → press **Ctrl+A**.
+2. Click the **A** icon → hit the **Ctrl+A** button in the popup.
 3. A panel opens with the page rendered block by block.
 4. Click / drag to select blocks you don't want → **排除 (exclude)**. Click an excluded row to restore it.
 5. **Copy** or **.md** to save.

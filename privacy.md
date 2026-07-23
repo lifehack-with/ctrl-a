@@ -1,6 +1,6 @@
 # Privacy Policy — Ctrl+A
 
-_Last updated: 2026-07-22_
+_Last updated: 2026-07-24_
 
 Ctrl+A does not collect, store, or transmit any user data.
 
@@ -14,4 +14,4 @@ Ctrl+A does not collect, store, or transmit any user data.
   page's content on demand. No `history`, no `tabs` background access, no host
   permissions to third-party sites.
 
-If you have questions, contact: info@propfirm-database.jp
+If you have questions, contact: contact@lifehack-with.com

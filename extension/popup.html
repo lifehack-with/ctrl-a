@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; }
+  @font-face { font-family: 'Press Start 2P'; font-style: normal; font-weight: 400;
+    src: url('fonts/PressStart2P-latin.woff2') format('woff2'); font-display: swap; }
+  /* 外周＝レンガ枠（背景レンガは popup.js が敷く） */
+  body {
+    width: 236px; box-sizing: border-box; padding: 8px 0;
+    border-width: 4px 0; border-style: solid; border-color: #2a1710; border-radius: 0;
+    background-color: #43271a; background-repeat: repeat; background-size: 26px 20px;
+    font: 13px/1.4 "DotGothic16", "Noto Sans JP", sans-serif; color: #eef3ff;
+  }
+  .inner { background: linear-gradient(180deg,#16264f,#0f1a3a); border: 2px solid #0c1530; border-radius: 8px; overflow: hidden; }
+  .head { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 13px 10px 11px; }
+  /* 拡張名＝ブリキ板に赤ペンキ手書きの看板風 */
+  .title {
+    position: relative; display: inline-flex; align-items: center; justify-content: center;
+    padding: 8px 16px; border-radius: 6px; border: 2px solid #63676f;
+    background: repeating-linear-gradient(92deg, rgba(255,255,255,.06) 0 1px, transparent 1px 4px),
+                linear-gradient(180deg, #e4e7ec, #b2b6bf 46%, #cbcfd6 55%, #94989f);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.65), inset 0 -3px 4px rgba(0,0,0,.3), 0 2px 3px rgba(0,0,0,.5);
+    font-family: "Press Start 2P", cursive; font-size: 20px; letter-spacing: 2px;
+    color: #b23a2e; text-shadow: 1px 1px 0 rgba(0,0,0,.25), 0 0 1px rgba(60,20,15,.5); -webkit-text-stroke: 0.7px rgba(45,18,12,.45);
+  }
+  .title .r { position: absolute; width: 3px; height: 3px; background: #5a5e66; }
+  .title .r1 { top: 4px; left: 4px; } .title .r2 { top: 4px; right: 4px; }
+  .title .r3 { bottom: 4px; left: 4px; } .title .r4 { bottom: 4px; right: 4px; }
+  .sub { font-size: 7.5px; letter-spacing: 1px; color: rgba(255,255,255,.5); }
+  /* ボタン横にレンガ。レンガ帯はボタンより上下5px（＝一つ分）低い＝ボタンが少し飛び出る */
+  .btnrow { position: relative; display: flex; justify-content: center; align-items: center; }
+  .brickband {
+    position: absolute; left: 0; right: 0; top: 5px; bottom: 5px;
+    background-color: #43271a; background-repeat: repeat; background-size: 26px 20px;
+  }
+  #go {
+    position: relative; z-index: 1; width: auto; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    background: linear-gradient(180deg,#ffcf4d,#f2a51c); color: #6b3d0c; border: 3px solid #7a4410;
+    border-radius: 6px; padding: 8px 18px; font-weight: 800; font-size: 13px; letter-spacing: .5px; cursor: pointer;
+    box-shadow: inset 2px 2px 0 rgba(255,255,255,.55), inset -3px -3px 0 rgba(150,78,12,.5), 2px 2px 0 rgba(0,0,0,.35);
+  }
+  #go span.dot { position: absolute; width: 4px; height: 4px; background: #7a4410; }
+  #go .d1 { top: 4px; left: 4px; } #go .d2 { top: 4px; right: 4px; }
+  #go .d3 { bottom: 4px; left: 4px; } #go .d4 { bottom: 4px; right: 4px; }
+  #go kbd {
+    font: 12px "DotGothic16", "Noto Sans JP", sans-serif; background: #fff; color: #16345f;
+    border: 2px solid #16345f; border-radius: 4px; padding: 2px 7px;
+  }
+  #msg { text-align: center; font-size: 10px; color: #f0a3bc; padding: 8px 10px; min-height: 12px; }
+</style>
+</head>
+<body>
+  <div class="inner">
+    <div class="head">
+      <div class="title"><span class="r r1"></span><span class="r r2"></span><span class="r r3"></span><span class="r r4"></span>Ctrl+A</div>
+      <div class="sub">GRAB PAGE AS MARKDOWN</div>
+    </div>
+    <div class="btnrow">
+      <div class="brickband"></div>
+      <button id="go">
+        <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="dot d4"></span>
+        <kbd>Ctrl</kbd><span style="opacity:.7">+</span><kbd>A</kbd>
+      </button>
+    </div>
+    <div id="msg"></div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

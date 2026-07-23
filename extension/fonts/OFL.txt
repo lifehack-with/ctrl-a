@@ -1,0 +1,8 @@
+Font: Press Start 2P (latin subset)
+Author: CodeMan38
+License: SIL Open Font License 1.1 (OFL-1.1)
+Source: https://fonts.google.com/specimen/Press+Start+2P
+Full license text: https://openfontlicense.org
+
+This font is bundled unmodified (latin subset only) and used under the OFL,
+which permits embedding and redistribution. Keep this notice with the font file.

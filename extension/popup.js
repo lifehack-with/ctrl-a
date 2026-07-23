@@ -10,15 +10,19 @@ document.body.style.backgroundImage = brickUrl;
 const brickband = document.querySelector(".brickband");
 if (brickband) brickband.style.backgroundImage = brickUrl;
 
+// UI言語: ブラウザが日本語なら日本語・それ以外は英語
+const JA = (navigator.language || "").toLowerCase().startsWith("ja");
+const T = (en, ja) => (JA ? ja : en);
+
 go.addEventListener("click", async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab || !tab.id) { msg.textContent = "タブが取得できません"; return; }
+  if (!tab || !tab.id) { msg.textContent = T("Can't find the active tab", "タブが取得できません"); return; }
   // chrome:// や拡張ページ等は注入不可。http/https のみ。
-  if (tab.url && !/^https?:/.test(tab.url)) { msg.textContent = "このページでは使えません"; return; }
+  if (tab.url && !/^https?:/.test(tab.url)) { msg.textContent = T("Not available on this page", "このページでは使えません"); return; }
   try {
     await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["fontface.js", "lib-md.js", "content.js"] });
     window.close(); // 注入したらポップアップは閉じ、ページ上のパネルに主導権を渡す
   } catch (e) {
-    msg.textContent = "実行できません（保護ページ？）";
+    msg.textContent = T("Can't run here (protected page?)", "実行できません（保護ページ？）");
   }
 });

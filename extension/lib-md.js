@@ -173,7 +173,7 @@
       const row = document.createElement("div");
       row.style.cssText = "padding:2px 4px;border-radius:4px;cursor:pointer;user-select:none";
       row.innerHTML = it.html;
-      row.title = "クリック/ドラッグで選択 → 上の「排除」で除外。除外行クリックで復活";
+      row.title = o.rowTitle || "クリック/ドラッグで選択 → 上の「排除」で除外。除外行クリックで復活";
       const ro = { key: it.key, row, live: it.live || null };
       row.addEventListener("pointerdown", e => {
         e.preventDefault();

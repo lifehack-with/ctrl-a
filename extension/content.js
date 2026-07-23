@@ -2,7 +2,10 @@
 // フローティング(右上・四隅の釘で自由リサイズ・ヘッダーで移動) ⇔ 右端サイドバー(上下右の枠を画面外へ逃がしてへばりつく)。
 (() => {
   const LIB = globalThis.PFD_MD;
-  if (!LIB) { alert("Ctrl+A: 読込に失敗しました（再度お試しください）"); return; }
+  // UI言語: ブラウザが日本語なら日本語・それ以外は英語
+  const JA = (navigator.language || "").toLowerCase().startsWith("ja");
+  const T = (en, ja) => (JA ? ja : en);
+  if (!LIB) { alert(T("Ctrl+A: failed to load (please try again)", "Ctrl+A: 読込に失敗しました（再度お試しください）")); return; }
 
   const root = document.body;
 
@@ -172,13 +175,13 @@
   const cornerHandles = [];
   Object.keys(HC).forEach(c => {
     const d = document.createElement("div");
-    d.title = "釘を掴んでサイズ変更";
+    d.title = T("Grab a nail to resize", "釘を掴んでサイズ変更");
     d.style.cssText = "position:absolute;width:12px;height:12px;background:radial-gradient(circle at 35% 32%,#ffe89a,#eaa016 62%,#c07d0e);border:2px solid #7a4410;border-radius:50%;box-shadow:inset 1px 1px 0 rgba(255,255,255,.7),0 1px 3px rgba(0,0,0,.6);z-index:6;" + HC[c];
     d.addEventListener("pointerdown", e => startResize(c, e));
     ui.appendChild(d); cornerHandles.push(d);
   });
   const edge = document.createElement("div");   // ドック時の幅変更エッジ（右ドック=左辺 / 左ドック=右辺）
-  edge.title = "ドラッグで幅変更";
+  edge.title = T("Drag to change width", "ドラッグで幅変更");
   edge.style.cssText = "position:absolute;left:0;top:0;bottom:0;width:14px;cursor:ew-resize;z-index:6;display:none";
   edge.addEventListener("pointerdown", e => startResize("l", e));
   ui.appendChild(edge);
@@ -191,10 +194,10 @@
     b.innerHTML = icon;
     return b;
   };
-  const leftBtn = mkHeadBtn(IC_DOCK_L, "左端に貼り付く", "5px 0 0 5px");
-  const dockBtn = mkHeadBtn(IC_DOCK, "フローティング⇔貼り付け", "0");
-  const rightBtn = mkHeadBtn(IC_DOCK, "右端に貼り付く", "0");
-  const closeBtn = mkHeadBtn(IC_X, "閉じる", "0 5px 5px 0");
+  const leftBtn = mkHeadBtn(IC_DOCK_L, T("Dock to left edge", "左端に貼り付く"), "5px 0 0 5px");
+  const dockBtn = mkHeadBtn(IC_DOCK, T("Float / dock toggle", "フローティング⇔貼り付け"), "0");
+  const rightBtn = mkHeadBtn(IC_DOCK, T("Dock to right edge", "右端に貼り付く"), "0");
+  const closeBtn = mkHeadBtn(IC_X, T("Close", "閉じる"), "0 5px 5px 0");
   [dockBtn, rightBtn, closeBtn].forEach(b => b.style.marginLeft = "-2px");
   leftBtn.style.transform = "translate(21px,-11px)";   // 4連ボタン：右へ寄せ・上11
   dockBtn.style.transform = "translate(14px,-11px)";
@@ -204,7 +207,7 @@
   const paintDockBtn = (btn, pressable) => { btn.style.background = pressable ? GOLD : BRICKBTN; btn.style.color = pressable ? "#6b3d0c" : "#d9b79c"; };
   const syncDockBtns = () => {
     dockBtn.innerHTML = g.docked ? IC_FLOAT : IC_DOCK;
-    dockBtn.title = g.docked ? "フローティングに戻す" : "端に貼り付ける";
+    dockBtn.title = g.docked ? T("Back to floating", "フローティングに戻す") : T("Dock to edge", "端に貼り付ける");
     paintDockBtn(leftBtn, !(g.docked && g.side === "left"));
     paintDockBtn(rightBtn, !(g.docked && g.side === "right"));
   };
@@ -249,12 +252,12 @@
     return b;
   };
   const setActive = (btn, on) => { btn.style.background = on ? GOLD : BRICKBTN; btn.style.color = on ? "#6b3d0c" : "#d9b79c"; };
-  const exBtn = mkGold(IC_EXCLUDE, "排除（選択中を除外）");
-  const clrBtn = mkGold(IC_MARQUEE, "選択解除");
-  const rstBtn = mkGold(IC_RESET, "元に戻す");
-  const copyBtn = mkGold(IC_COPY, "コピー");
-  const dlBtn = mkGold(IC_DL, ".md ダウンロード");
-  const navBtn = mkGold(IC_MAP, "ナビ（ページ全体図＋現在地）");
+  const exBtn = mkGold(IC_EXCLUDE, T("Exclude selected blocks", "排除（選択中を除外）"));
+  const clrBtn = mkGold(IC_MARQUEE, T("Clear selection", "選択解除"));
+  const rstBtn = mkGold(IC_RESET, T("Restore all excluded", "元に戻す"));
+  const copyBtn = mkGold(IC_COPY, T("Copy Markdown", "コピー"));
+  const dlBtn = mkGold(IC_DL, T("Download .md", ".md ダウンロード"));
+  const navBtn = mkGold(IC_MAP, T("Mini-map (page overview + position)", "ナビ（ページ全体図＋現在地）"));
   const gL = document.createElement("div"); gL.style.cssText = "display:flex;gap:0"; gL.append(exBtn, clrBtn, rstBtn);
   const gR = document.createElement("div"); gR.style.cssText = "display:flex;gap:0"; gR.append(copyBtn, dlBtn, navBtn);
   [clrBtn, rstBtn, dlBtn, navBtn].forEach(b => b.style.marginLeft = "-3px");
@@ -281,7 +284,7 @@
 
   // ミニマップ
   const mini = document.createElement("div");
-  mini.title = "ページ全体図（クリック/ドラッグで移動）";
+  mini.title = T("Page overview (click / drag to jump)", "ページ全体図（クリック/ドラッグで移動）");
   mini.style.cssText = "flex:none;width:30px;background:#05070d;border:2px solid #23252e;border-radius:6px;position:relative;overflow:hidden;cursor:pointer";
   const vpBox = document.createElement("div");
   vpBox.style.cssText = "position:absolute;left:0;right:0;background:rgba(120,180,255,.14);border-top:1px solid rgba(150,200,255,.6);border-bottom:1px solid rgba(150,200,255,.6);pointer-events:none";
@@ -304,7 +307,7 @@
     b.addEventListener("pointerup", stop); b.addEventListener("pointerleave", stop);
     return b;
   };
-  hbar.append(mkArrow(IC_CHEVL, -1, "左へ（押しっぱなしで連続）"), mkArrow(IC_CHEVR, 1, "右へ（押しっぱなしで連続）"));
+  hbar.append(mkArrow(IC_CHEVL, -1, T("Scroll left (hold to repeat)", "左へ（押しっぱなしで連続）")), mkArrow(IC_CHEVR, 1, T("Scroll right (hold to repeat)", "右へ（押しっぱなしで連続）")));
   content.append(viewWrap, hbar);
 
   // ---- ファイル名欄（編集可・ヘッダー(紺)内=コピー/DLの上。レンガ帯の高さは変えない）----
@@ -316,7 +319,7 @@
   const fileInput = document.createElement("input");
   fileInput.type = "text"; fileInput.spellcheck = false;
   fileInput.value = (location.host || "page").replace(/[^a-z0-9.-]/gi, "_");
-  fileInput.title = "ダウンロードのファイル名（編集可）";
+  fileInput.title = T("Download filename (editable)", "ダウンロードのファイル名（編集可）");
   fileInput.style.cssText = "background:transparent;border:none;outline:none;color:#e7ecf5;font:11px ui-monospace,Menlo,Consolas,monospace;width:150px;padding:0";
   const fileExt = document.createElement("span"); fileExt.textContent = ".md"; fileExt.style.cssText = "color:#8fa6c8;font:11px ui-monospace,Menlo,Consolas,monospace";
   fileWrap.append(fileIco, fileInput, fileExt);
@@ -376,7 +379,7 @@
     mini.style.display = on ? "block" : "none";
     navBtn.style.background = on ? GOLD : BRICKBTN;
     navBtn.style.color = on ? "#6b3d0c" : "#d9b79c";
-    navBtn.title = on ? "ナビ（ページ全体図＋現在地）ON" : "ナビ OFF";
+    navBtn.title = on ? T("Mini-map ON", "ナビ（ページ全体図＋現在地）ON") : T("Mini-map OFF", "ナビ OFF");
     if (on) drawMini();
   };
 
@@ -413,16 +416,19 @@
   };
   const updateCount = (excluded, selected) => {
     if (syncDupes(excluded) && exRef) { exRef.refresh(); return; }   // 伝播したら再描画してから通常処理へ
-    count.textContent = mdBlocks.length + "ブロック"
-      + (excluded.size ? " ・除外 " + excluded.size : "")
-      + (selected.size ? " ・選択 " + selected.size : "");
+    count.textContent = mdBlocks.length + T(" blocks", "ブロック")
+      + (excluded.size ? T(" · excluded ", " ・除外 ") + excluded.size : "")
+      + (selected.size ? T(" · selected ", " ・選択 ") + selected.size : "");
     // 排除・選択解除は選択があるとき金／元に戻すは除外があるとき金（既定はレンガ色）
     setActive(exBtn, selected.size > 0);
     setActive(clrBtn, selected.size > 0);
     setActive(rstBtn, excluded.size > 0);
     themeAll();
   };
-  const ex = LIB.buildExcluder(rowsHost, items, { onChange: updateCount });
+  const ex = LIB.buildExcluder(rowsHost, items, {
+    onChange: updateCount,
+    rowTitle: T("Click / drag to select → hit Exclude above. Click an excluded row to restore", "クリック/ドラッグで選択 → 上の「排除」で除外。除外行クリックで復活")
+  });
   exRef = ex;
   rows = [...rowsHost.children];
   updateCount(ex.excluded, ex.selected);

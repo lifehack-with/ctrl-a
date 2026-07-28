@@ -1,0 +1,4 @@
+{
+  "appName": { "message": "Ctrl+A" },
+  "appDesc": { "message": "Grab the whole page as clean Markdown. One click, one big Ctrl+A button, preview, drop the noise, then copy or download .md." }
+}

@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Ctrl+A",
+  "name": "__MSG_appName__",
   "version": "1.0.0",
-  "description": "Grab the whole page as clean Markdown. One click, one big Ctrl+A button, preview, drop the noise, then copy or download .md.",
+  "description": "__MSG_appDesc__",
+  "default_locale": "en",
   "permissions": ["scripting", "activeTab"],
   "action": {
     "default_title": "Ctrl+A — page to Markdown",

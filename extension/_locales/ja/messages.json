@@ -1,4 +1,4 @@
 {
-  "appName": { "message": "Ctrl+A" },
-  "appDesc": { "message": "ページ全体をクリーンな Markdown に。ワンクリック＋大きな Ctrl+A ボタン、プレビューで不要ブロックを排除して、コピーまたは .md ダウンロード。" }
+  "appName": { "message": "ページをMarkdownでコピー — Ctrl+A" },
+  "appDesc": { "message": "ページ全体を綺麗な Markdown で保存。ワンクリックでプレビュー、要らないブロックを排除して、コピーまたは .md ダウンロード。アカウント不要・サーバー送信なし。" }
 }

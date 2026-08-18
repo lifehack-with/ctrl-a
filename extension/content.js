@@ -9,7 +9,7 @@
 
   const root = document.body;
 
-  const OLD = document.getElementById("ctrla-panel");
+  const OLD = document.getElementById("ctrla-host");
   if (OLD) { try { OLD._destroy && OLD._destroy(); } catch (e) {} OLD.remove(); }
 
   // ===== Lucide inline SVG =====
@@ -47,7 +47,7 @@
         }
       }
     });
-    const selfPanel = clone.querySelector("#ctrla-panel");
+    const selfPanel = clone.querySelector("#ctrla-host");
     if (selfPanel) selfPanel.remove();
     return LIB.tidy(LIB.MIN.toMd(clone));
   };
@@ -55,8 +55,13 @@
 
   // ページ側ハイライト/ミニマップ用: MDブロック→生DOM要素の対応付け（正規化テキスト先頭一致・最小要素優先）
   // 照合できないブロックは live 無し＝ハイライト/ミニマップ点のみ非対応（排除・出力は全ブロック可能）
-  // MD記法を平文化してから正規化（[text](url)→text・URL除去）。要素側textContentと同じ土俵で照合するため
-  const mdPlain = s => (s || "").replace(/\[([^\]]*)\]\(([^)]*)\)/g, "$1").replace(/https?:\/\/\S+/g, " ");
+  // MD記法を平文化してから正規化。要素側textContentと同じ土俵で照合するため。
+  // 落とすのは「MD側にしか無い文字」＝ 画像・URL・olの連番。これを残すと先頭40文字の窓がズレて全滅する。
+  const mdPlain = s => (s || "")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")   // 画像: DOM側 textContent には文字が無い
+    .replace(/\]\([^)]*\)/g, "]")            // リンクのURL部分のみ除去。[[1]](#cite_note-1) の入れ子にも効く
+    .replace(/^[ \t]*\d+\.[ \t]+/gm, " ")    // ol の連番: CSS生成なのでDOM側に存在しない（Referencesが全滅していた）
+    .replace(/https?:\/\/\S+/g, " ");
   // 記号を落とし、さらに空白も全除去して照合（li連結・改行差などの空白ズレに強くする）
   const normTxt = s => (s || "").replace(/[#>*`|_\-\[\]()"':;.,^•†‡]+/g, " ").replace(/\s+/g, "").slice(0, 40).toLowerCase();
   // 候補は「表示中」のみ。目次/ナビ内の同名テキスト(アウトライン)より本文側を優先し、見出しブロックは h1-h6 を優先
@@ -101,9 +106,19 @@
       .map(pos => "<span style='position:absolute;" + pos + ";width:3px;height:3px;background:" + color + "'></span>").join("");
   };
 
+  // ===== ページCSSからの隔離（Shadow DOM）=====
+  // 素のDOMに差すと訪問先ページのCSSがUIに効く（例: `button svg{stroke:none}` でボタンのアイコンが全部消える）。
+  // Shadow DOM に入れると外のCSSは一切入って来ない＝どのサイトでも同じ見た目になる。
+  // ホストは 0x0 の固定枠だけ。中身(#ctrla-panel)が今まで通り position:fixed で自分の位置を決める。
+  const host = document.createElement("div");
+  host.id = "ctrla-host";
+  host.style.cssText = "all:initial!important;position:fixed!important;top:0!important;left:0!important;width:0!important;height:0!important;"
+    + "margin:0!important;padding:0!important;border:0!important;overflow:visible!important;display:block!important;"
+    + "visibility:visible!important;opacity:1!important;transform:none!important;filter:none!important;z-index:2147483647!important";
+  const shadow = host.attachShadow({ mode: "open" });
   const sbStyle = document.createElement("style");
   sbStyle.textContent = "#ctrla-panel .ca-term::-webkit-scrollbar{width:0;height:0;display:none}#ctrla-panel .ca-term{scrollbar-width:none}";
-  (document.head || document.documentElement).appendChild(sbStyle);
+  shadow.appendChild(sbStyle);
 
   // ===== パネル =====
   const ui = document.createElement("div");
@@ -327,7 +342,8 @@
   head.append(headRow, fileRow);   // ヘッダー内に2段（badge/操作 ＋ ファイル名）
 
   ui.append(head, tools, content);
-  document.body.appendChild(ui);
+  shadow.appendChild(ui);
+  document.body.appendChild(host);
 
   // ===== ミニマップ描画・同期 =====
   function pageH() { return Math.max(document.documentElement.scrollHeight, document.body.scrollHeight, 1); }
@@ -432,7 +448,7 @@
   exRef = ex;
   rows = [...rowsHost.children];
   updateCount(ex.excluded, ex.selected);
-  ui._destroy = () => { try { ex.destroy(); } catch (e) {} window.removeEventListener("resize", onWinResize); window.removeEventListener("scroll", onScroll); sbStyle.remove(); };
+  host._destroy = () => { try { ex.destroy(); } catch (e) {} window.removeEventListener("resize", onWinResize); window.removeEventListener("scroll", onScroll); };
 
   // ===== ボタン配線 =====
   exBtn.onclick = () => ex.excludeSelected();
@@ -454,5 +470,5 @@
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name + ".md"; a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
-  closeBtn.onclick = () => { ui._destroy(); ui.remove(); };
+  closeBtn.onclick = () => { host._destroy(); host.remove(); };
 })();

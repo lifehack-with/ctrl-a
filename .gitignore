@@ -1,0 +1,28 @@
+# ---- 「公開しないもの」を列挙する ----
+# ★「公開するもの」を列挙する方式にしない。追記し忘れが黙って壊れるため。
+#   親（lifehack-with/.gitignore）と同じ作法。
+
+# ビルド生成物・配布物＝版に入れない。
+# ★zip は extension/ から作る写し。手で同期する物を版に持たない（絶対原則「分けない」）。
+#   2026-08-18 まで .gitignore が無く、dist/ が素で未追跡だった＝ここで add -A すると入る状態だった。
+dist/
+node_modules/
+*.crx
+*.zip
+
+# 鍵。拡張の署名鍵は絶対に版へ入れない
+*.pem
+*.key
+.env
+secrets.json
+
+# 作業層・状態
+_work/
+__pycache__/
+*.log
+*.tmp
+
+# OS/エディタ
+.DS_Store
+Thumbs.db
+.vscode/

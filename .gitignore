@@ -26,3 +26,12 @@ __pycache__/
 .DS_Store
 Thumbs.db
 .vscode/
+
+# 掲載まわりの台帳と道具。**この repo は公開なので版に入れない。**
+# 置き場は非公開側の lifehack-with/store-assets/ ── ctrl-a のスクショ
+# （panel-annotated / screenshot-1..4）が既にそこに在り、掲載文だけ公開側に
+# 置くと1つの作業が2か所に割れる。stakeout も同じ作り（store-assets/stakeout/）。
+# store-listing.md には狙い語の選び方と競合の実測が入っていて、
+# 公開すると真似できる形で出る。消しても索引とキャッシュには残る。
+store-listing.md
+copy-block.ps1
